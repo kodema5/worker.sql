@@ -1,3 +1,3 @@
 # worker.sql
 
-notifies tasks to registered sidecars
+how to manage sidecar workers via notification channel?

@@ -47,27 +47,6 @@ begin
 end;
 $$;
 
-create function worker.done(
-    req jsonb
-)
-    returns _worker.task
-    language sql
-    security definer
-as $$
-    select worker.done(
-        jsonb_populate_record(
-            null::worker.done_it,
-            req))
-$$;
-
-create function worker.web_done(
-    req jsonb
-)
-    returns jsonb
-    language sql
-    security definer
-as $$
-    select to_jsonb(worker.done(req))
-$$;
+call util.export(util.web_fn_t('worker.done(worker.done_it)'));
 
 \endif

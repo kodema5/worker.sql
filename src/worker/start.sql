@@ -32,27 +32,6 @@ begin
 end;
 $$;
 
-create function worker.start(
-    req jsonb
-)
-    returns _worker.task
-    language sql
-    security definer
-as $$
-    select worker.start(
-        jsonb_populate_record(
-            null::worker.start_it,
-            req))
-$$;
 
-create function worker.web_start(
-    req jsonb
-)
-    returns jsonb
-    language sql
-    security definer
-as $$
-    select to_jsonb(worker.start(req))
-$$;
-
+call util.export(util.web_fn_t('worker.start(worker.start_it)'));
 \endif

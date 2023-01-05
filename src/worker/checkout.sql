@@ -2,9 +2,7 @@
 \else
 \set worker_checkout_sql true
 
--- a worker checks-out
-
-\ir assign.sql
+-- a worker checks-out temporarily
 
 create type worker.checkout_it as (
     id  text
@@ -34,27 +32,6 @@ begin
 end;
 $$;
 
-create function worker.checkout(
-    req jsonb
-)
-    returns _worker.worker
-    language sql
-    security definer
-as $$
-    select worker.checkout(
-        jsonb_populate_record(
-            null::worker.checkout_it,
-            req))
-$$;
-
-create function worker.web_checkout(
-    req jsonb
-)
-    returns jsonb
-    language sql
-    security definer
-as $$
-    select to_jsonb(worker.checkout(req))
-$$;
+call util.export(util.web_fn_t('worker.checkout(worker.checkout_it)'));
 
 \endif

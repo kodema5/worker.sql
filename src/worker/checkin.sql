@@ -2,15 +2,7 @@
 \else
 \set worker_checkin_sql true
 
--- a worker checks-in
--- future:
--- worker to pass statistics for worker-selection
-
-\ir assign.sql
-
--- "register" automatically checks in
--- if to add stats, may need to update "register" too
---
+-- a worker checks-in if any task
 create type worker.checkin_it as (
     id  text
 );
@@ -39,27 +31,6 @@ begin
 end;
 $$;
 
-create function worker.checkin(
-    req jsonb
-)
-    returns _worker.worker
-    language sql
-    security definer
-as $$
-    select worker.checkin(
-        jsonb_populate_record(
-            null::worker.checkin_it,
-            req))
-$$;
-
-create function worker.web_checkin(
-    req jsonb
-)
-    returns jsonb
-    language sql
-    security definer
-as $$
-    select to_jsonb(worker.checkin(req))
-$$;
+call util.export(util.web_fn_t('worker.checkin(worker.checkin_it)'));
 
 \endif
