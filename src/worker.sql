@@ -137,32 +137,46 @@ create procedure  worker.assign ()
     security definer
 as $$
 declare
-    t _worker.task;
-    w _worker.worker;
+    r record;
 begin
-    for t in (
-        select *
-        from _worker.task
-        where worker_id is null -- unassigned
-        or ( -- not started
-            current_timestamp + '5s'::interval > assigned_tz
-            and started_tz is null
-        )
-    ) loop
-        w = worker.worker(t);
-        if w.id is not null
-        then
+    for r in (
+        with to_update as (
             update _worker.task
-            set worker_id = w.id,
+            set
+                worker_id = (t2.worker).id,
                 assigned_tz = current_timestamp
-            where id = t.id;
-
-            -- notify worker of task
-            perform pg_notify(
-                w.channel_id,
-                to_jsonb(t)::text
-            );
+            from (
+                select ts as task,
+                    worker.worker(ts) as worker
+                from _worker.task ts
+                where worker_id is null -- unassigned
+                or (
+                    -- not-started
+                    current_timestamp + '5s'::interval > assigned_tz
+                    and started_tz is null
+                )
+                for update
+                skip locked
+            ) t2
+            where id = (t2.task).id
+            and (t2.worker).id is not null
+            returning
+                (t2.worker).channel_id as channel_id,
+                to_jsonb(t2.task)::text as payload
+        )
+        select *
+        from to_update
+    ) loop
+        if r.channel_id is null
+        then
+            continue;
         end if;
+
+        -- notify worker of task
+        perform pg_notify(
+            r.channel_id,
+            r.payload
+        );
     end loop;
 end;
 $$;
@@ -197,6 +211,7 @@ begin
     )
     returning * into t;
 
+    -- assign all pending tasks
     call worker.assign();
 
     select * into t
